@@ -1,3 +1,10 @@
+
+# data and temporary files
+
+/data/*
+/temp/*
+/outputs/*
+
 # History files
 .Rhistory
 .Rapp.history
@@ -37,3 +44,4 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+.Rproj.user

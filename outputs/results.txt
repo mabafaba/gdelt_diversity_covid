@@ -1,14 +1,7 @@
 
 
- Average sources per topic decreased?
-	Welch Two Sample t-test
-
-data:  sources_per_topic_pre and sources_per_topic_post
-t = 11.69, df = 234870, p-value = 1
-alternative hypothesis: true difference in means is less than 0
-95 percent confidence interval:
-       -Inf 0.04839771
-sample estimates:
-mean of x mean of y 
- 2.236039  2.193611 
-
+ SOURCE ENTROPY PRE and POST OUTBREAK# A tibble: 2 x 2
+  phase           `mean(source_entropy)`
+  <chr>                            <dbl>
+1 after outbreak                    1.33
+2 before outbreak                   1.39

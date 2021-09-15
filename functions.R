@@ -1,4 +1,47 @@
 
+#' read gdlet csv if reduced to the needed columns
+#' @param filename full path to file
+#' @param small if TRUE, keep main columns only
+#' @param filter_sources if TRUE keeps only sources that match exactly 'bbc.com', 'ccn.com', 'foxnews.com', 'theguardian.com'
+#' @return a tibble data frame 
+read_gdelt_prepared<-function(filename, small = T,filter_sources = T){
+  # cat(filename);cat('\n')
+  cat(cyan("reading data..\n"))
+  df <- suppressMessages(read_csv(filename,col_names = FALSE,
+                                  col_types = list(col_character(),
+                                                   col_character(),
+                                                   col_character(),
+                                                   col_character())))
+  df<-df[-1,-1] #remove first row and first columns
+  colnames(df)<-c("date","source","topics")
+  # Topic labels are separated with ";". Convert that column into a "vector column", where each entry contains a vector of topics (splitting the strings on ";")
+  cat(cyan("parsing topics..\n"))
+  df$topics<-strsplit(df$topics,";")
+  # get dates into good format
+  cat(cyan("parsing dates..\n"))
+  df$date<- paste0(substr(df$date,1,4),# year: first four characters
+                   "-",
+                   substr(df$date,5,6), #month 
+                   "-",
+                   substr(df$date,7,8)) %>% # day 
+    (lubridate::ymd) # convert to datetime data format (ymd = year-month-day)
+  
+  # remove odd sources
+  if(filter_sources){
+    df <- df %>% filter(source %in% c("bbc.com","foxnews.com","cnn.com","theguardian.com"))
+  }
+  cat(cyan("reduce to worldbank topics..\n"))
+  df$wb_topics <- df$topics %>% lapply(function(x){grep("^WB_",x,value=T)}) # extract world bank standard topic codes only
+  unique_wb_topcs<-unique(unlist(df$wb_topics))
+  # df$not_wb_topics <- df$topics %>% lapply(function(x){x[!(x %in% unique_wb_topcs)]}) # sorry for this weird line. Just picks out the topics that are not in wb_topics.
+  cat(green("data is ready yay!\n"))
+  if(small){
+    return(df[,c("date","source", "wb_topics")])
+  }
+  df<-ungroup(df)
+}
+
+
 
 #' read gdlet csv and get it into nicer format
 #' @param filename full path to file
@@ -76,11 +119,11 @@ test_that("shannon entropy correct",{
 })
 
 
-#'
+
 topic_counts_by_date_and_source<-function(df){
   counts <- df  %>%
     group_by(date,source) %>% # for each day...
-    summarise(topic_count = count_occurances_across_list(not_wb_topics)) # count each topic's frequency
+    summarise(topic_count = count_occurances_across_list(wb_topics)) # count each topic's frequency
   
   # unnest data frame
   counts$values <- counts$topic_count$values
@@ -116,4 +159,44 @@ GET_covid_case_data<-function(cummulative = F){
   stop("problem in getting covid case data")
 }
 
+wbtopic_gdelt_to_label<-function(x){
+  x %>% gsub("^WB_[0-9]*_","",.)%>% tolower %>% gsub("_"," ",.)  
+}
 
+
+first_of_week<-function(date){
+  paste(year(date), week(date),"1") %>% as.POSIXlt(format = "%Y %U %u")
+}
+
+
+# count how often a topic appeared before vs. after pandemic
+compare_topic_prominence<-function(counts, cutoff_date = ymd("2020-03-11")){
+  timespan_before <- (cutoff_date - min(counts$date)) %>% as.numeric %>% divide_by(7)
+  timespan_after <- (max(counts$date) - (cutoff_date+1))  %>% as.numeric %>% divide_by(7) 
+  
+  counts_pre_post<-counts %>% group_by(date < cutoff_date,values) %>% summarise(count=sum(number_of_occurances)) 
+  counts_before<-counts_pre_post[counts_pre_post$`date < cutoff_date`,]
+  counts_after<-counts_pre_post[!(counts_pre_post$`date < cutoff_date`),]
+  counts_pre_post<-full_join(counts_before,counts_after,by = "values")
+  colnames(counts_pre_post)<-c("X","topic","count_before","XX","count_after")
+
+  # per week average
+  # counts_before$count<-counts_before$count/timespan_before
+  # counts_after$count<-counts_after$count/timespan_after
+  
+  counts_pre_post<-counts_pre_post %>% 
+    dplyr::select(topic,count_before,count_after) %>%
+    arrange(count_before) %>% 
+    mutate(count_after = ifelse(is.na(count_after),0,count_after)) %>% # NAs to zeros (NAs happen in join() if zero occurances on one side)
+    mutate(count_before = ifelse(is.na(count_before),0,count_before)) %>% 
+    mutate(ratio = count_after/count_before, total = count_after+count_before, delta = count_after-count_before) 
+}
+
+# plot count over time for a given topic
+topic_timeline<-function(topic,counts){
+  counts_pandemics<-counts %>% filter(grepl(topic,values,ignore.case = T)) %>% group_by(year(date),week(date),source) %>% summarise(date = min(date),number_of_occurances=sum(number_of_occurances)) 
+  ggplot(counts_pandemics,aes(x=date,y=number_of_occurances,col=source))+
+    geom_line(position = 'stack')+
+    ggtitle(paste0("number of articles including `",wbtopic_gdelt_to_label(topic),"` as a topic"))+
+    theme_minimal()  
+}
