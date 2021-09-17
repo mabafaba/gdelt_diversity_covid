@@ -208,7 +208,13 @@ plot_and_save_topic_timeline<-function(topic,counts,prefix = ""){
          height=unit(4,'cm'))
 }
 
-lapply(top_increased_topics$topic,plot_and_save_topic_timeline,counts=counts,"most_increased")
-lapply(top_reduced_topics$topic,plot_and_save_topic_timeline,counts=counts,"most_decreased")
+dir.create("./outputs/most_increased")
+dir.create("./outputs/most_decreased")
+
+lapply(top_increased_topics$topic,plot_and_save_topic_timeline,counts=counts,"/most_increased/")
+lapply(top_reduced_topics$topic,plot_and_save_topic_timeline,counts=counts,"/most_decreased/")
+
+
+
 
 

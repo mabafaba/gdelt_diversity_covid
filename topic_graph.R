@@ -9,9 +9,13 @@ library(networkD3)
 library(htmlwidgets)
 
 # make graph from edgelist -----------------------------------------------------------
-p <- simpleNetwork(edgelist[,c('values','parent')], height="1000px", width="1000px",zoom = T,opacity = 1,linkDistance = 10)
-p
+
 edgelist <- read_csv("./data/gdelt_n.csv",skip_empty_rows = T) %>% dplyr::select(values,count,parent)
+
+
+# edgelist$parent %>% gsub(///////)
+
+
 
 parent_as_R_code <- edgelist$parent %>%
   gsub("main category with [0-9]* children","c('ROOT')",.) %>% 
@@ -24,10 +28,11 @@ edgelist<-tidyr::unnest(edgelist,cols=c(parent))
 edgelist$values<-wbtopic_gdelt_to_label(edgelist$values)
 edgelist$parent<-tolower(edgelist$parent)
 
+p <- simpleNetwork(edgelist[,c('values','parent')], height="1000px", width="1000px",zoom = T,opacity = 1,linkDistance = 10)
+p
 
 
-
-g<-edgelist %>% dplyr::select(from = values, to = parent) %>% as.matrix %>% (igraph::graph_from_edgelist)
+    g<-edgelist %>% dplyr::select(from = values, to = parent) %>% as.matrix %>% (igraph::graph_from_edgelist)
 E(g)$row<-edgelist$row
 
 # loops:
@@ -45,6 +50,7 @@ plot(g,vertex.size = 0.4,
      edge.color="#000000AA",
      vertex.label.size = 0)
 dev.off()
+
 # get hierarchical subgraphs ----------------------------------------------
 
 
@@ -83,7 +89,6 @@ all_descendents<-function(parent, known_descendents = c(), g, max_levels=100,cur
   return(known_descendents)
 }
 
-
 root_children <- all_descendents(V(g)['root'],g = g,max_levels = 0)
 jpeg('./outputs/wbthemes/root_one_down.jpg',1500,1500)
 plot(subgraph(g,root_children),vertex.size=3,vertex.label.dist = 1,vertex.color = '#000000',vertex.frame.color = '#000000',vertex.label.cex=1,edge.arrow.size=0.2)
@@ -99,6 +104,7 @@ jpeg('./outputs/wbthemes/root_three_down.jpg',1500,1500)
 plot(subgraph(g,root_children),vertex.size=3,vertex.label.dist = 1,vertex.color = '#000000',vertex.frame.color = '#000000',vertex.label.cex=1,edge.arrow.size=0.2)
 dev.off()
 
+shortest.paths(g,V(g)[])
 
 main_topics<-children("root",g)
 

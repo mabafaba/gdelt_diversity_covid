@@ -65,7 +65,7 @@ read_gdelt<-function(filename, small = T,filter_sources = T){
   
   # remove odd sources
   if(filter_sources){
-  df <- df %>% filter(source %in% c("bbc.com","foxnews.com","cnn.com","theguardian.com"))
+    df <- df %>% filter(source %in% c("bbc.com","foxnews.com","cnn.com","theguardian.com"))
   }
   df$wb_topics <- df$X9 %>% lapply(function(x){grep("^WB_",x,value=T)}) # extract world bank standard topic codes only
   unique_wb_topcs<-unique(unlist(df$wb_topics))
@@ -92,7 +92,7 @@ count_occurances_across_list<-function(x){
   if(ncol(counts)!=2){ # catch empty input
     warning("no occurances to count")
     return(data.frame(values = character(0),number_of_occurances=integer(0)))
-    }
+  }
   colnames(counts)<-c("values","number_of_occurances")
   counts$values<-as.character(counts$values) # change the default "factor" data type to character data type
   counts
@@ -139,7 +139,7 @@ entropy_from_counts<-function(counts){
   
   counts %>% group_by(year = year(date), week = week(date),source) %>%
     summarise(date = min(date),
-      entropy = shannon_entropy(number_of_occurances), # entropy
+              entropy = shannon_entropy(number_of_occurances), # entropy
               relative_entropy  = shannon_entropy(number_of_occurances)/sum(number_of_occurances),
               num_unique_topics = n(),
               num_articles = sum(number_of_occurances),
@@ -179,7 +179,7 @@ compare_topic_prominence<-function(counts, cutoff_date = ymd("2020-03-11")){
   counts_after<-counts_pre_post[!(counts_pre_post$`date < cutoff_date`),]
   counts_pre_post<-full_join(counts_before,counts_after,by = "values")
   colnames(counts_pre_post)<-c("X","topic","count_before","XX","count_after")
-
+  
   # per week average
   # counts_before$count<-counts_before$count/timespan_before
   # counts_after$count<-counts_after$count/timespan_after
@@ -193,10 +193,25 @@ compare_topic_prominence<-function(counts, cutoff_date = ymd("2020-03-11")){
 }
 
 # plot count over time for a given topic
-topic_timeline<-function(topic,counts){
-  counts_pandemics<-counts %>% filter(grepl(topic,values,ignore.case = T)) %>% group_by(year(date),week(date),source) %>% summarise(date = min(date),number_of_occurances=sum(number_of_occurances)) 
-  ggplot(counts_pandemics,aes(x=date,y=number_of_occurances,col=source))+
+topic_timeline<-function(topic,counts,as_percentage = TRUE){
+  
+  
+  counts_topic<-counts %>% filter(grepl(topic,values,ignore.case = T)) %>% group_by(year(date),week(date),source) %>% summarise(date = min(date),number_of_occurances=sum(number_of_occurances)) 
+  
+  
+  if(as_percentage){
+    total_weekly <- counts %>% ungroup %>%
+      group_by(source,year(date),week(date)) %>%
+      summarise(date=min(date),total_articles = sum(number_of_occurances))
+    
+    counts_topic<-left_join(counts_topic,total_weekly,by=c("date","source"))
+    counts_topic<-counts_topic %>% mutate(number_of_occurances = number_of_occurances/total_articles)
+  }
+  
+  
+  ggplot(counts_topic,aes(x=date,y=number_of_occurances,col=source))+
     geom_line(position = 'stack')+
     ggtitle(paste0("number of articles including `",wbtopic_gdelt_to_label(topic),"` as a topic"))+
+    ylab(paste(ifelse(as_percentage,"percentage","number"),"of topic labels"))+
     theme_minimal()  
 }
