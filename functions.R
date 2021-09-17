@@ -36,45 +36,13 @@ read_gdelt_prepared<-function(filename, small = T,filter_sources = T){
   # df$not_wb_topics <- df$topics %>% lapply(function(x){x[!(x %in% unique_wb_topcs)]}) # sorry for this weird line. Just picks out the topics that are not in wb_topics.
   cat(green("data is ready yay!\n"))
   if(small){
-    return(df[,c("date","source", "wb_topics")])
+    return(df[,c("date","source", "wb_topics","not_wb_topics")])
   }
   df<-ungroup(df)
 }
 
 
 
-#' read gdlet csv and get it into nicer format
-#' @param filename full path to file
-#' @param small if TRUE, keep main columns only
-#' @param filter_sources if TRUE keeps only sources that match exactly 'bbc.com', 'ccn.com', 'foxnews.com', 'theguardian.com'
-#' @return a tibble data frame 
-read_gdelt<-function(filename, small = T,filter_sources = T){
-  # cat(filename);cat('\n')
-  df <- suppressMessages(read_csv(filename,col_names = FALSE))
-  # Topic labels are separated with ";". Convert that column into a "vector column", where each entry contains a vector of topics (splitting the strings on ";")
-  df$X9<-strsplit(df$X9,";")
-  # get dates into good format
-  # parse dates
-  df$date<- paste0(substr(df$X2,1,4),# year: first four characters
-                   "-",
-                   substr(df$X2,5,6), #month 
-                   "-",
-                   substr(df$X2,7,8)) %>% # day 
-    (lubridate::ymd) # convert to datetime data format (ymd = year-month-day)
-  colnames(df)[which(colnames(df)=="X5")]<-"source"
-  
-  # remove odd sources
-  if(filter_sources){
-    df <- df %>% filter(source %in% c("bbc.com","foxnews.com","cnn.com","theguardian.com"))
-  }
-  df$wb_topics <- df$X9 %>% lapply(function(x){grep("^WB_",x,value=T)}) # extract world bank standard topic codes only
-  unique_wb_topcs<-unique(unlist(df$wb_topics))
-  df$not_wb_topics <- df$X9 %>% lapply(function(x){x[!(x %in% unique_wb_topcs)]}) # sorry for this weird line. Just picks out the topics that are not in wb_topics.
-  if(small){
-    return(df[,c("X9","date","source", "wb_topics","not_wb_topics")])
-  }
-  df
-}
 
 
 

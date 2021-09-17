@@ -1,3 +1,20 @@
+library(magrittr) # code piping
+library(readr) # fast file reading 
+library(dplyr) # basic data wrangling
+library(data.table) # basic data operations but fast
+library(tidyr)
+
+library(ggplot2) # visualisations
+library(crayon) # nice console printing 
+library(knitr) 
+library(lubridate) # manage date/time data
+library(purrr) # vectorization
+library(testthat)
+library(CausalImpact)
+library(httr) # curl stuff / downloading stuff & calling APIs
+source("./functions.R")
+
+df<-read_gdelt_prepared(filename = "./data/ALL_s.csv")
 
 
 unique_topics<-df$not_wb_topics %>% unlist %>% unique
