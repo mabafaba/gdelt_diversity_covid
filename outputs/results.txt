@@ -1,6 +1,6 @@
 
 
- SOURCE ENTROPY PRE and POST OUTBREAK# A tibble: 2 x 2
+ SOURCE ENTROPY PRE and POST OUTBREAK A tibble: 2 x 2
   phase           `mean(source_entropy)`
   <chr>                            <dbl>
 1 after outbreak                    1.33

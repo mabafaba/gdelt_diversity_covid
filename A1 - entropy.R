@@ -3,7 +3,6 @@ library(readr) # fast file reading
 library(dplyr) # basic data wrangling
 library(data.table) # basic data operations but fast
 library(tidyr)
-
 library(ggplot2) # visualisations
 library(crayon) # nice console printing 
 library(knitr) 
@@ -13,6 +12,7 @@ library(testthat)
 library(CausalImpact)
 library(httr) # curl stuff / downloading stuff & calling APIs
 source("./functions.R")
+
 
 
 # READING FROM MANY FILES IN ORIGINAL GDELT FORMAT ------------------------------------------------------
@@ -38,11 +38,12 @@ source("./functions.R")
 # WORK FROM SINGLE FILE -------------------------------------------------------------
 
 # counts <- read_gdelt_prepared(filename = "./data/ALL_s.csv") %>% # function specific to the exact data format as received from Morry
-#   topic_counts_by_date_and_source %>% # make one row for each topic, date and source combination and count occurances 
+#   topic_counts_by_date_and_source %>% # make one row for each topic, date and source combination and count occurances
 #   write_rds(paste0("temp/data/ALL_COUNTS_",i,".RDS")) # safe for later
-
+# 
 counts <- readRDS('./temp/data/ALL_COUNTS_1.RDS')
 
+counts
 
 # counts$week<-first_of_week(counts$date)
 # totals <- counts %>% group_by(year(date),week(date),
@@ -196,9 +197,17 @@ counts_pre_post<-compare_topic_prominence(counts,cutoff_date = WHO_pandemic_star
 
 
 
+ggplot(counts_pre_post,aes(x=delta,y=total))+geom_histogram()
+
 # most reduced topics
-top_increased_topics <- counts_pre_post %>% arrange(desc(delta)) %>% head(3) %>% dplyr::select(topic,delta) 
-top_reduced_topics<-counts_pre_post %>% arrange(delta) %>% head(3) %>% dplyr::select(topic,delta) 
+top_increased_topics <- counts_pre_post %>% arrange(desc(delta)) %>% head(10) %>% dplyr::select(topic,delta) 
+top_reduced_topics<-counts_pre_post %>% arrange(delta) %>% head(10) %>% dplyr::select(topic,delta) 
+
+# most reduced by ratio
+
+top_increased_topics <- counts_pre_post %>% arrange((ratio)) %>% head(10) %>% dplyr::select(topic,ratio) 
+top_reduced_topics   <- counts_pre_post %>% arrange(descratio) %>% head(10) %>% dplyr::select(topic,ratio) 
+
 
 plot_and_save_topic_timeline<-function(topic,counts,prefix = ""){
   ggsave(filename = paste0("./outputs/",prefix,"topic_timeline_",topic,".pdf"),
