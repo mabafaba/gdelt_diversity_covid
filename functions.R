@@ -1,3 +1,9 @@
+library(purrr)
+
+
+# DATA MANAGAMENT ---------------------------------------------------------
+
+
 
 #' read gdlet csv if reduced to the needed columns
 #' @param filename full path to file
@@ -49,7 +55,31 @@ read_gdelt_prepared<-function(filename, small = T,filter_sources = T){
 
 
 
+GET_covid_case_data<-function(cummulative = F){
+  cases<-httr::GET("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us.csv") %>%
+    httr::content(type = "text/csv")
+  cases %<>% arrange(date)
+  if(!cummulative){return(cases)}
+  cases_diff<-cases[-1,]
+  cases_diff$cases<-cases$cases[-1] - cases$cases[-nrow(cases)]
+  cases_diff$deaths<-cases$deaths[-1] - cases$deaths[-nrow(cases)]
+  if(cummulative){return(cases_diff)}
+  stop("problem in getting covid case data")
+}
 
+wbtopic_gdelt_to_label<-function(x){
+  x %>% gsub("^WB_[0-9]*_","",.)%>% tolower %>% gsub("_"," ",.)  
+}
+
+
+first_of_week<-function(date){
+  paste(year(date), week(date),"1") %>% as.POSIXlt(format = "%Y %U %u")
+}
+
+
+
+
+# CALCULATIONS ------------------------------------------------------------
 
 
 
@@ -97,7 +127,7 @@ test_that("shannon entropy correct",{
 topic_counts_by_date_and_source<-function(df){
   counts <- df  %>%
     group_by(date,source) %>% # for each day...
-    summarise(topic_count = count_occurances_across_list(wb_topics)) # count each topic's frequency
+    summarise(topic_count = count_occurances_across_list(not_wb_topics)) # count each topic's frequency
   
   # unnest data frame
   counts$values <- counts$topic_count$values
@@ -120,27 +150,6 @@ entropy_from_counts<-function(counts){
               occuring_topics = paste(values,collapse = "; "))
 }
 
-
-GET_covid_case_data<-function(cummulative = F){
-  cases<-httr::GET("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us.csv") %>%
-    httr::content(type = "text/csv")
-  cases %<>% arrange(date)
-  if(!cummulative){return(cases)}
-  cases_diff<-cases[-1,]
-  cases_diff$cases<-cases$cases[-1] - cases$cases[-nrow(cases)]
-  cases_diff$deaths<-cases$deaths[-1] - cases$deaths[-nrow(cases)]
-  if(cummulative){return(cases_diff)}
-  stop("problem in getting covid case data")
-}
-
-wbtopic_gdelt_to_label<-function(x){
-  x %>% gsub("^WB_[0-9]*_","",.)%>% tolower %>% gsub("_"," ",.)  
-}
-
-
-first_of_week<-function(date){
-  paste(year(date), week(date),"1") %>% as.POSIXlt(format = "%Y %U %u")
-}
 
 
 # count how often a topic appeared before vs. after pandemic
@@ -166,6 +175,30 @@ compare_topic_prominence<-function(counts, cutoff_date = ymd("2020-03-11")){
     mutate(ratio = count_after/count_before, total = count_after+count_before, delta = count_after-count_before) 
 }
 
+
+# MODEL -------------------------------------------------------------------
+
+# interrupted linear model
+ilm<-function(x,y,x_treatment){
+  df <- tibble(x,y) %>%  mutate(
+    time_relative_to_treatment = x-x_treatment,
+    is_after_treatment = time_relative_to_treatment>=0,
+    time_after_treatment = ifelse(is_after_treatment,time_relative_to_treatment,0)
+  ) 
+  lm_result <- lm( y ~ 
+                     time_relative_to_treatment + 
+                     is_after_treatment + 
+                     time_after_treatment, 
+                   data = df)
+  lm_data<-df
+  lm_prediction<-predict(lm_result,lm_data)
+  return(list(lm=lm_result,data=lm_data,prediction=lm_prediction))
+}
+
+
+# PLOTTING ----------------------------------------------------------------
+
+
 # plot count over time for a given topic
 topic_timeline<-function(topic,counts,as_percentage = TRUE){
   
@@ -189,3 +222,16 @@ topic_timeline<-function(topic,counts,as_percentage = TRUE){
     ylab(paste(ifelse(as_percentage,"percentage","number"),"of topic labels"))+
     theme_minimal()  
 }
+
+
+
+# NETWORKS ------------------------------------------------------------------
+
+plot_graph_quickly<-purrr::partial(plot.igraph,
+                                   vertex.size = 1,
+                                   vertex.color='#00000055',
+                                   vertex.label.cex=0.7,
+                                   vertex.label.color = "#00000055",
+                                   vertex.col=0.1,edge.color = "#00000055")
+
+

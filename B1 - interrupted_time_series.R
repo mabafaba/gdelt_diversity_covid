@@ -11,22 +11,6 @@ entropy_stat <- entropy_stat %>% ungroup %>%
 
 
 
-# interrupted linear model
-ilm<-function(x,y,x_treatment){
-  df <- tibble(x,y) %>%  mutate(
-    time_relative_to_treatment = x-x_treatment,
-    is_after_treatment = time_relative_to_treatment>=0,
-    time_after_treatment = ifelse(is_after_treatment,time_relative_to_treatment,0)
-  ) 
- lm_result <- lm( y ~ 
-                time_relative_to_treatment + 
-                is_after_treatment + 
-                time_after_treatment, 
-              data = df)
- lm_data<-df
- lm_prediction<-predict(lm_result,lm_data)
- return(list(lm=lm_result,data=lm_data,prediction=lm_prediction))
-}
 
 entropy_all_predicted<-entropy_stat %>% filter(FALSE)
 sink('./outputs/results.html',append = F)

@@ -39,8 +39,8 @@ source("./functions.R")
 
 # counts <- read_gdelt_prepared(filename = "./data/ALL_s.csv") %>% # function specific to the exact data format as received from Morry
 #   topic_counts_by_date_and_source %>% # make one row for each topic, date and source combination and count occurances
-#   write_rds(paste0("temp/data/ALL_COUNTS_",i,".RDS")) # safe for later
-# 
+#   write_rds(paste0("temp/data/ALL_COUNTS_1.RDS")) # safe for later
+
 counts <- readRDS('./temp/data/ALL_COUNTS_1.RDS')
 
 counts
@@ -222,6 +222,10 @@ dir.create("./outputs/most_decreased")
 
 lapply(top_increased_topics$topic,plot_and_save_topic_timeline,counts=counts,"/most_increased/")
 lapply(top_reduced_topics$topic,plot_and_save_topic_timeline,counts=counts,"/most_decreased/")
+
+
+
+
 
 
 

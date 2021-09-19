@@ -69,3 +69,14 @@ for(i in c(1:length(cooc_count_files))){
 }
 combinations %>% unique %>% length
 
+
+# Combine files -----------------------------------------------------------
+
+coocs <- list.files('./temp/cooccurrances_n/',full.names = T)
+coocs <- lapply(coocs,readRDS)
+coocs <- do.call(rbind,coocs)
+# there are multiple counts for the same combination originating from different files
+# summing them up takes a whilleee already :/
+coocs <- coocs %>% group_by(A,B) %>% summarise(n=sum(n))
+
+saveRDS(coocs, "./temp/cooccurrances_n_overall.RDS")
